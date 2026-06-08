@@ -8,6 +8,8 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: DATABASE_URL
+        value: postgresql://postgres.logiumjyfecwcssjlpmz:numagyong01@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=5
+      - key: DIRECT_URL
         value: postgresql://postgres.logiumjyfecwcssjlpmz:numagyong01@aws-0-eu-west-1.pooler.supabase.com:5432/postgres
       - key: CORS_ORIGINS
         value: https://bank-app-ten-sigma.vercel.app
