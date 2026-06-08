@@ -4,17 +4,13 @@ services:
     env: node
     buildCommand: npm install && npx prisma generate && npx tsc
     startCommand: npx prisma db push --accept-data-loss && node dist/index.js
-    disk:
-      name: sqlite-data
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: JWT_SECRET
         generateValue: true
       - key: DATABASE_URL
-        value: file:/data/dev.db
+        value: postgresql://postgres.logiumjyfecwcssjlpmz:numagyong01@aws-0-eu-west-1.pooler.supabase.com:5432/postgres
       - key: CORS_ORIGINS
-        value: https://bank-frontend.vercel.app
+        value: https://bank-app-ten-sigma.vercel.app
       - key: SENDGRID_FROM_EMAIL
         value: noreply@apexbank.com
       - key: SENDGRID_FROM_NAME
