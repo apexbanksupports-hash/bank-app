@@ -1,12 +1,14 @@
 import { useState, useEffect, FormEvent, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { accounts, transfers, categories, wire, banks as banksApi } from '../api/client';
+import { accounts, transfers, categories, wire, banks as banksApi, beneficiaries as benefApi } from '../api/client';
 import { GlassCard } from '../components/ui/glass-card';
 import BankSelect from '../components/BankSelect';
 import {
   IconSend, IconCheck, IconSearch, IconUser, IconBuilding, IconClock,
   IconArrowRight, IconPlus, IconDownload, IconGlobe, IconLandmark,
+  IconHeart, IconRefresh,
 } from '../components/Icons';
 import { useAuth } from '../hooks/useAuth';
 
@@ -36,8 +38,8 @@ function ModeToggle({ mode, setMode, setStep }: {
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
 const item = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 } };
 
-const QUICK_AMOUNTS = [20, 50, 100, 500];
-const DAILY_LIMIT = 10000;
+const QUICK_AMOUNTS = [100, 500, 1000, 5000];
+const DAILY_LIMIT = 50000;
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -55,22 +57,27 @@ function getArrivalEstimate(): string {
   return `Arrives by ${tomorrow.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`;
 }
 
-function getWireArrival(): string {
+function getWireArrival(estimatedArrival?: string | Date): string {
+  if (estimatedArrival) {
+    const d = new Date(estimatedArrival);
+    return `Arrives by ${d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`;
+  }
   const now = new Date();
   const next = new Date(now);
   next.setDate(next.getDate() + 3);
-  const day = next.toLocaleDateString('en-US', { weekday: 'long' });
-  if (day === 'Saturday') next.setDate(next.getDate() + 2);
-  if (day === 'Sunday') next.setDate(next.getDate() + 1);
+  while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() + 1);
   return `Arrives by ${next.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`;
 }
 
 export default function TransferPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const wireBeneficiaryFromNav = (location.state as any)?.wireBeneficiary;
   const [accountList, setAccountList] = useState<any[]>([]);
   const [catList, setCatList] = useState<any[]>([]);
   const [recentTransfers, setRecentTransfers] = useState<any[]>([]);
   const [dailyUsed, setDailyUsed] = useState(0);
+  const [savedBeneficiaries, setSavedBeneficiaries] = useState<any[]>([]);
 
   const [mode, setMode] = useState<'internal' | 'wire'>('internal');
   const [step, setStep] = useState<'form' | 'review' | 'confirm'>('form');
@@ -87,28 +94,60 @@ export default function TransferPage() {
   const [beneficiaryAccount, setBeneficiaryAccount] = useState('');
   const [swiftCode, setSwiftCode] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [sendCurrency, setSendCurrency] = useState('USD');
+  const [receiveCurrency, setReceiveCurrency] = useState('USD');
+  const [purposeOfTransfer, setPurposeOfTransfer] = useState('');
+  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<string | undefined>();
 
   const [sending, setSending] = useState(false);
   const [lastTransfer, setLastTransfer] = useState<any>(null);
   const [searchQ, setSearchQ] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  const wireFee = parseFloat(amount || '0') * 0.015;
+  const wireFee = Math.max(10, Math.min(50, Math.round(parseFloat(amount || '0') * 0.015 * 100) / 100));
   const wireTotal = parseFloat(amount || '0') + wireFee;
 
   useEffect(() => {
-    Promise.all([accounts.list(), categories.list(), transfers.list(1, 50), transfers.getLimits()]).then(([accts, cats, hist, limits]) => {
+    Promise.all([
+      accounts.list(),
+      categories.list(),
+      transfers.list(1, 50),
+      transfers.getLimits(),
+      benefApi.list().catch(() => []),
+    ]).then(([accts, cats, hist, limits, bens]) => {
       setAccountList(accts);
       setCatList(cats);
       if (accts.length > 0) setSenderAccountId(accts[0].id);
       setRecentTransfers(hist.transfers.filter((t: any) => t.senderId === user?.id));
       setDailyUsed(limits.dailyUsed);
+      setSavedBeneficiaries(bens);
     }).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (wireBeneficiaryFromNav) {
+      setMode('wire');
+      setBeneficiaryName(wireBeneficiaryFromNav.name);
+      setBeneficiaryAccount(wireBeneficiaryFromNav.accountNumber);
+      setSwiftCode(wireBeneficiaryFromNav.swiftCode);
+      setRecipientEmail(wireBeneficiaryFromNav.email || '');
+      setSelectedBeneficiaryId(wireBeneficiaryFromNav.id);
+      setSelectedCountry({
+        country: wireBeneficiaryFromNav.bankCountry,
+        code: wireBeneficiaryFromNav.bankCountryCode,
+        currencyCode: wireBeneficiaryFromNav.currency,
+      });
+      setSelectedBank({
+        name: wireBeneficiaryFromNav.bankName,
+        swift: wireBeneficiaryFromNav.swiftCode,
+      });
+    }
+  }, [wireBeneficiaryFromNav]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -138,6 +177,25 @@ export default function TransferPage() {
       setSwiftCode(selectedBank.swift);
     }
   }, [selectedBank]);
+
+  useEffect(() => {
+    if (selectedCountry) {
+      setSendCurrency(selectedCountry.currencyCode || 'USD');
+    }
+  }, [selectedCountry]);
+
+  useEffect(() => {
+    if (mode === 'wire' && parseFloat(amount) > 0 && sendCurrency !== receiveCurrency) {
+      wire.quote({
+        amount: parseFloat(amount),
+        fromCurrency: sendCurrency,
+        toCurrency: receiveCurrency,
+        countryCode: selectedCountry?.code,
+      }).then(q => setExchangeRate(q.exchangeRate)).catch(() => setExchangeRate(null));
+    } else {
+      setExchangeRate(null);
+    }
+  }, [amount, sendCurrency, receiveCurrency, selectedCountry]);
 
   const selectRecipient = (acc: any) => {
     setRecipientAccount(acc.accountNumber);
@@ -173,15 +231,18 @@ export default function TransferPage() {
       if (mode === 'wire') {
         const result = await wire.send({
           senderAccountId,
+          beneficiaryId: selectedBeneficiaryId,
           beneficiaryName: beneficiaryName.trim(),
           beneficiaryAccountNumber: beneficiaryAccount.trim(),
+          beneficiaryEmail: recipientEmail.trim() || undefined,
           bankName: selectedBank!.name,
+          bankCountry: selectedCountry?.country,
+          bankCountryCode: selectedCountry!.code,
           swiftCode: swiftCode.trim(),
-          countryCode: selectedCountry!.code,
           amount: numAmount,
-          currency: selectedCountry?.currencyCode || 'USD',
-          description: description || undefined,
-          recipientEmail: recipientEmail.trim() || undefined,
+          currency: sendCurrency,
+          receiveCurrency,
+          purposeOfTransfer: purposeOfTransfer.trim() || undefined,
         });
         setLastTransfer(result);
       } else {
@@ -231,6 +292,11 @@ export default function TransferPage() {
     setBeneficiaryAccount('');
     setSwiftCode('');
     setRecipientEmail('');
+    setSendCurrency('USD');
+    setReceiveCurrency('USD');
+    setPurposeOfTransfer('');
+    setSelectedBeneficiaryId(undefined);
+    setExchangeRate(null);
   };
 
   const sendAgain = () => {
@@ -240,13 +306,31 @@ export default function TransferPage() {
         setSelectedRecipient(lastTransfer.recipient);
       } else {
         setBeneficiaryName(lastTransfer.beneficiaryName || '');
-        setBeneficiaryAccount(lastTransfer.beneficiaryAccountNumber || '');
+        setBeneficiaryAccount(lastTransfer.beneficiaryAccount || '');
         setSwiftCode(lastTransfer.swiftCode || '');
       }
       setAmount('');
       setStep('form');
       setLastTransfer(null);
     }
+  };
+
+  const selectSavedBeneficiary = (b: any) => {
+    setBeneficiaryName(b.name);
+    setBeneficiaryAccount(b.accountNumber);
+    setSwiftCode(b.swiftCode);
+    setSelectedBeneficiaryId(b.id);
+    setRecipientEmail(b.email || '');
+    setSelectedCountry({
+      country: b.bankCountry,
+      code: b.bankCountryCode,
+      currencyCode: b.currency,
+    });
+    setSelectedBank({
+      name: b.bankName,
+      swift: b.swiftCode,
+    });
+    setReceiveCurrency(b.currency || 'USD');
   };
 
   return (
@@ -362,12 +446,36 @@ export default function TransferPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {savedBeneficiaries.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                          Saved Beneficiaries <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(click to use)</span>
+                        </label>
+                        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                          {savedBeneficiaries.slice(0, 6).map((b: any) => (
+                            <button key={b.id} type="button" onClick={() => selectSavedBeneficiary(b)}
+                              className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all border ${
+                                selectedBeneficiaryId === b.id
+                                  ? 'border-blue-500/50 bg-blue-500/10'
+                                  : 'hover:bg-white/5'
+                              }`}
+                              style={{ borderColor: selectedBeneficiaryId === b.id ? undefined : 'var(--border)' }}>
+                              <IconHeart size={10} className={b.isFavorite ? 'text-rose-400' : 'text-gray-500'} />
+                              <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{b.name}</span>
+                              <span className="font-mono" style={{ color: 'var(--text-muted)' }}>{b.swiftCode.slice(0, 4)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <BankSelect
                       selectedCountry={selectedCountry}
                       selectedBank={selectedBank}
                       onSelectCountry={setSelectedCountry}
                       onSelect={setSelectedBank}
                     />
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Beneficiary Name</label>
@@ -384,6 +492,7 @@ export default function TransferPage() {
                           placeholder="Recipient account number" />
                       </div>
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>SWIFT / BIC Code</label>
                       <input type="text" value={swiftCode} onChange={e => setSwiftCode(e.target.value.toUpperCase())}
@@ -391,14 +500,32 @@ export default function TransferPage() {
                         style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                         placeholder="e.g. BOFAUS3N" maxLength={11} />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                        Recipient Email <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(receipt will be sent here)</span>
-                      </label>
-                      <input type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl placeholder-gray-500 focus:border-blue-500/50 focus:outline-none transition-all input-glow"
-                        style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-                        placeholder="recipient@example.com" />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Recipient Email (optional)</label>
+                        <input type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl placeholder-gray-500 focus:border-blue-500/50 focus:outline-none transition-all input-glow"
+                          style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                          placeholder="recipient@example.com" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Purpose of Transfer</label>
+                        <select value={purposeOfTransfer} onChange={e => setPurposeOfTransfer(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl focus:border-blue-500/50 focus:outline-none transition-all"
+                          style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                          <option value="" className="bg-[#0a0e1a]">Select purpose</option>
+                          <option value="family_support" className="bg-[#0a0e1a]">Family Support</option>
+                          <option value="business_payment" className="bg-[#0a0e1a]">Business Payment</option>
+                          <option value="investment" className="bg-[#0a0e1a]">Investment</option>
+                          <option value="education" className="bg-[#0a0e1a]">Education</option>
+                          <option value="real_estate" className="bg-[#0a0e1a]">Real Estate</option>
+                          <option value="medical" className="bg-[#0a0e1a]">Medical Expenses</option>
+                          <option value="travel" className="bg-[#0a0e1a]">Travel</option>
+                          <option value="savings" className="bg-[#0a0e1a]">Savings</option>
+                          <option value="other" className="bg-[#0a0e1a]">Other</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -417,7 +544,7 @@ export default function TransferPage() {
                       <button key={q} type="button" onClick={() => setAmount(q.toString())}
                         className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${parseFloat(amount) === q ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'border hover:bg-white/5'}`}
                         style={{ borderColor: 'var(--border)', color: parseFloat(amount) === q ? undefined : 'var(--text-muted)' }}>
-                        ${q}
+                        ${q.toLocaleString()}
                       </button>
                     ))}
                   </div>
@@ -425,8 +552,23 @@ export default function TransferPage() {
 
                 {mode === 'wire' && parseFloat(amount) > 0 && (
                   <div className="p-3 rounded-xl text-xs space-y-1" style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)' }}>
-                    <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Wire Fee (1.5%)</span><span style={{ color: 'var(--text-primary)' }}>${wireFee.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Wire Fee (min $10, max $50)</span><span style={{ color: 'var(--text-primary)' }}>${wireFee.toFixed(2)}</span></div>
                     <div className="flex justify-between font-medium"><span style={{ color: 'var(--text-muted)' }}>Total Deducted</span><span style={{ color: 'var(--text-primary)' }}>${wireTotal.toFixed(2)}</span></div>
+                    {exchangeRate && sendCurrency !== receiveCurrency && (
+                      <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Exchange Rate</span><span style={{ color: 'var(--text-primary)' }}>1 {sendCurrency} = {exchangeRate.toFixed(4)} {receiveCurrency}</span></div>
+                    )}
+                  </div>
+                )}
+
+                {mode === 'wire' && parseFloat(amount) > 0 && sendCurrency !== receiveCurrency && exchangeRate && (
+                  <div className="p-3 rounded-xl flex items-center justify-between" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Recipient gets approximately</p>
+                      <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                        {receiveCurrency} {(parseFloat(amount) * exchangeRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <IconRefresh size={16} className="text-blue-400" />
                   </div>
                 )}
 
@@ -465,9 +607,19 @@ export default function TransferPage() {
                   <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Amount to send</p>
                   <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
                     ${parseFloat(amount || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    <span className="text-sm font-normal ml-2" style={{ color: 'var(--text-muted)' }}>{sendCurrency}</span>
                   </p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{mode === 'wire' ? getWireArrival() : getArrivalEstimate()}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{mode === 'wire' ? getWireArrival(lastTransfer?.estimatedArrival) : getArrivalEstimate()}</p>
                 </div>
+
+                {mode === 'wire' && exchangeRate && sendCurrency !== receiveCurrency && (
+                  <div className="p-3 rounded-xl text-center" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Recipient receives approximately</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                      {receiveCurrency} {(parseFloat(amount) * exchangeRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -506,6 +658,12 @@ export default function TransferPage() {
                         <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Destination</span>
                         <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{selectedCountry?.country} ({selectedCountry?.code})</span>
                       </div>
+                      {purposeOfTransfer && (
+                        <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                          <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Purpose</span>
+                          <span className="text-sm font-medium capitalize" style={{ color: 'var(--text-primary)' }}>{purposeOfTransfer.replace(/_/g, ' ')}</span>
+                        </div>
+                      )}
                       {recipientEmail && (
                         <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--border)' }}>
                           <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Receipt Email</span>
@@ -526,7 +684,7 @@ export default function TransferPage() {
                 <div className="p-3 rounded-lg text-xs" style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)' }}>
                   {mode === 'wire' ? (
                     <>
-                      <div className="flex justify-between mb-1"><span style={{ color: 'var(--text-muted)' }}>Wire Fee (1.5%)</span><span style={{ color: 'var(--text-primary)' }}>${wireFee.toFixed(2)}</span></div>
+                      <div className="flex justify-between mb-1"><span style={{ color: 'var(--text-muted)' }}>Wire Fee (min $10, max $50)</span><span style={{ color: 'var(--text-primary)' }}>${wireFee.toFixed(2)}</span></div>
                       <div className="flex justify-between mb-1"><span style={{ color: 'var(--text-muted)' }}>Total Deducted</span><span style={{ color: 'var(--text-primary)' }}>${wireTotal.toFixed(2)}</span></div>
                     </>
                   ) : (
@@ -564,8 +722,12 @@ export default function TransferPage() {
                   <IconCheck size={32} className="text-emerald-400" />
                 </motion.div>
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                  <h2 className="text-xl font-bold text-emerald-400 mb-1">Transfer Complete</h2>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your money has been sent successfully</p>
+                  <h2 className="text-xl font-bold text-emerald-400 mb-1">
+                    {mode === 'wire' ? 'Wire Transfer Initiated' : 'Transfer Complete'}
+                  </h2>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                    {mode === 'wire' ? 'Your international wire transfer is being processed' : 'Your money has been sent successfully'}
+                  </p>
                 </motion.div>
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
                   className="mt-6 p-4 rounded-xl" style={{ background: 'var(--bg-secondary)' }}>
@@ -576,6 +738,11 @@ export default function TransferPage() {
                     <>
                       <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{lastTransfer.beneficiaryName || beneficiaryName}</p>
                       <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{lastTransfer.bankName || selectedBank?.name} · {lastTransfer.swiftCode || swiftCode}</p>
+                      {lastTransfer.trackingNumber && (
+                        <p className="text-xs mt-2 font-mono px-3 py-1.5 rounded-lg inline-block" style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa' }}>
+                          Tracking: {lastTransfer.trackingNumber}
+                        </p>
+                      )}
                     </>
                   ) : (
                     <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{lastTransfer.recipient?.firstName} {lastTransfer.recipient?.lastName}</p>
@@ -615,7 +782,7 @@ export default function TransferPage() {
             <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-secondary)' }}>
               <motion.div initial={{ width: 0 }} animate={{ width: `${(dailyUsed / DAILY_LIMIT) * 100}%` }}
                 className="h-full rounded-full"
-                style={{ background: dailyRemaining() < 1000 ? '#ef4444' : dailyRemaining() < 5000 ? '#f59e0b' : '#2563eb' }} />
+                style={{ background: dailyRemaining() < 5000 ? '#ef4444' : dailyRemaining() < 20000 ? '#f59e0b' : '#2563eb' }} />
             </div>
             <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>${dailyUsed.toLocaleString()} of ${DAILY_LIMIT.toLocaleString()} used today</p>
           </GlassCard>
@@ -628,7 +795,7 @@ export default function TransferPage() {
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Bank</span><span className="font-medium" style={{ color: 'var(--text-primary)' }}>{selectedBank.name}</span></div>
                 <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>SWIFT</span><span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{selectedBank.swift}</span></div>
-                <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Type</span><span className="capitalize" style={{ color: 'var(--text-secondary)' }}>{selectedBank.type}</span></div>
+                {selectedCountry && <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Country</span><span className="capitalize" style={{ color: 'var(--text-secondary)' }}>{selectedCountry.country} ({selectedCountry.code})</span></div>}
               </div>
             </GlassCard>
           )}
@@ -641,15 +808,19 @@ export default function TransferPage() {
               <div className="space-y-2 text-xs" style={{ color: 'var(--text-muted)' }}>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                  <span>International wire transfers typically arrive in 1-3 business days</span>
+                  <span>International wire transfers typically arrive in 1-4 business days</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                  <span>A 1.5% wire fee applies (min $10, max $50)</span>
+                  <span>Fee: $10 minimum, $50 maximum (1.5% of amount)</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                  <span>Recipient may receive funds in local currency at their bank's exchange rate</span>
+                  <span>Real-time exchange rate conversion available</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                  <span>Save beneficiaries for quick repeat transfers</span>
                 </div>
               </div>
             </GlassCard>
@@ -701,6 +872,7 @@ export default function TransferPage() {
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Ref</span><span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{lastTransfer.referenceNumber}</span></div>
                 <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Amount</span><span className="font-medium text-emerald-400">${lastTransfer.amount.toFixed(2)}</span></div>
+                {lastTransfer.fee > 0 && <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Fee</span><span style={{ color: 'var(--text-secondary)' }}>${lastTransfer.fee.toFixed(2)}</span></div>}
                 <div className="flex justify-between">
                   <span style={{ color: 'var(--text-muted)' }}>To</span>
                   <span style={{ color: 'var(--text-secondary)' }}>
@@ -709,6 +881,9 @@ export default function TransferPage() {
                 </div>
                 <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Date</span><span style={{ color: 'var(--text-secondary)' }}>{formatDate(lastTransfer.createdAt)}</span></div>
                 <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Status</span><span className="text-emerald-400 capitalize">{lastTransfer.status}</span></div>
+                {lastTransfer.trackingNumber && (
+                  <div className="flex justify-between"><span style={{ color: 'var(--text-muted)' }}>Tracking</span><span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{lastTransfer.trackingNumber}</span></div>
+                )}
               </div>
             </GlassCard>
           )}

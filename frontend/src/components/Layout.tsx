@@ -8,7 +8,7 @@ import {
   IconHome, IconBuilding, IconSend, IconClock, IconShield, IconGamepad,
   IconCalendar, IconTags, IconFileText, IconUser, IconSettings, IconBell,
   IconSun, IconMoon, IconLogout, IconSearch, IconMenu, IconClose, IconCard,
-  ApexLogo,
+  IconGlobe, ApexLogo,
 } from './Icons';
 
 interface NavItem { path: string; label: string; icon: React.ReactNode; }
@@ -25,6 +25,7 @@ const secondaryLinks: NavItem[] = [
   { path: '/scheduled', label: 'Scheduled', icon: <IconCalendar /> },
   { path: '/categories', label: 'Categories', icon: <IconTags /> },
   { path: '/statements', label: 'Statements', icon: <IconFileText /> },
+  { path: '/beneficiaries', label: 'Beneficiaries', icon: <IconGlobe /> },
   { path: '/entertainment', label: 'Entertainment', icon: <IconGamepad /> },
 ];
 

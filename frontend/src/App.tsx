@@ -16,6 +16,7 @@ import ScheduledTransfersPage from './pages/ScheduledTransfersPage';
 import StatementsPage from './pages/StatementsPage';
 import SafeBoxPage from './pages/SafeBoxPage';
 import EntertainmentPage from './pages/EntertainmentPage';
+import BeneficiariesPage from './pages/BeneficiariesPage';
 import Layout from './components/Layout';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -73,6 +74,7 @@ function AppContent() {
           <Route path="scheduled" element={<ScheduledTransfersPage />} />
           <Route path="statements" element={<StatementsPage />} />
           <Route path="safebox" element={<SafeBoxPage />} />
+          <Route path="beneficiaries" element={<BeneficiariesPage />} />
           <Route path="entertainment" element={<EntertainmentPage />} />
         </Route>
       </Routes>

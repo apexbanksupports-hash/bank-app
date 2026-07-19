@@ -15,6 +15,7 @@ import safeboxRoutes from './routes/safebox.routes';
 import entertainmentRoutes from './routes/entertainment.routes';
 import banksRoutes from './routes/banks.routes';
 import wireRoutes from './routes/wire.routes';
+import beneficiaryRoutes from './routes/beneficiary.routes';
 import { verifyToken } from './utils/jwt';
 import { blacklistToken } from './services/blacklist.service';
 
@@ -43,6 +44,7 @@ app.use('/api/safebox', safeboxRoutes);
 app.use('/api/entertainment', entertainmentRoutes);
 app.use('/api/banks', banksRoutes);
 app.use('/api/wire', wireRoutes);
+app.use('/api/beneficiaries', beneficiaryRoutes);
 
 app.post('/api/logout', (req, res) => {
   const authHeader = req.headers.authorization;

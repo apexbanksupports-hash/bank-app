@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -39,6 +38,8 @@ model User {
   safeboxes           SafeBox[]
   luckySpins          LuckySpin[]
   dailyRewards        DailyReward[]
+  beneficiaries       Beneficiary[]
+  wireTransfers       WireTransfer[]
 }
 
 model KycDocument {
@@ -179,4 +180,58 @@ model DailyReward {
   date      DateTime @default(now())
   reward    Float    @default(0.0)
   streak    Int      @default(1)
+}
+
+model Beneficiary {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  name               String
+  email              String?
+  bankName           String
+  bankCountry        String
+  bankCountryCode    String
+  swiftCode          String
+  accountNumber      String
+  currency           String   @default("USD")
+  isFavorite         Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  wireTransfers      WireTransfer[]
+}
+
+model WireTransfer {
+  id                     String   @id @default(uuid())
+  userId                 String
+  user                   User     @relation(fields: [userId], references: [id])
+  senderAccountId        String
+  beneficiaryId          String?
+  beneficiary            Beneficiary? @relation(fields: [beneficiaryId], references: [id])
+  beneficiaryName        String
+  beneficiaryAccount     String
+  beneficiaryEmail       String?
+  bankName               String
+  bankCountry            String
+  bankCountryCode        String
+  swiftCode              String
+  amount                 Float
+  sendCurrency           String   @default("USD")
+  receiveCurrency        String   @default("USD")
+  exchangeRate           Float    @default(1.0)
+  convertedAmount        Float?
+  fee                    Float
+  totalDeducted          Float
+  referenceNumber        String   @unique
+  status                 String   @default("initiated")
+  statusHistory          String   @default("[]")
+  trackingNumber         String?
+  correspondentBank      String?
+  correspondentSwift     String?
+  purposeOfTransfer      String?
+  estimatedArrival       DateTime?
+  completedAt            DateTime?
+  failedReason           String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }

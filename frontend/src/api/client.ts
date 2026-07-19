@@ -265,17 +265,46 @@ export const admin = {
 export const wire = {
   send: (data: {
     senderAccountId: string;
+    beneficiaryId?: string;
     beneficiaryName: string;
     beneficiaryAccountNumber: string;
+    beneficiaryEmail?: string;
     bankName: string;
+    bankCountry?: string;
+    bankCountryCode: string;
     swiftCode: string;
-    countryCode: string;
     amount: number;
     currency?: string;
+    receiveCurrency?: string;
     description?: string;
-    recipientEmail?: string;
+    purposeOfTransfer?: string;
+    correspondentBank?: string;
+    correspondentSwift?: string;
   }) =>
     apiRequest<any>('/wire', { method: 'POST', body: JSON.stringify(data) }),
+
+  list: (page: number = 1, limit: number = 20, status?: string) =>
+    apiRequest<{ transfers: any[]; total: number; page: number; pages: number }>(
+      `/wire?page=${page}&limit=${limit}${status ? `&status=${status}` : ''}`
+    ),
+
+  get: (id: string) =>
+    apiRequest<any>(`/wire/${id}`),
+
+  getByReference: (ref: string) =>
+    apiRequest<any>(`/wire/reference/${ref}`),
+
+  track: (trackingNumber: string) =>
+    apiRequest<any>(`/wire/track/${trackingNumber}`),
+
+  cancel: (id: string) =>
+    apiRequest<any>(`/wire/${id}/cancel`, { method: 'PUT' }),
+
+  currencies: () =>
+    apiRequest<{ code: string; name: string; rate: number }[]>('/wire/currencies/list'),
+
+  quote: (data: { amount: number; fromCurrency: string; toCurrency: string; countryCode?: string }) =>
+    apiRequest<any>('/wire/quote', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export const banks = {
@@ -287,6 +316,35 @@ export const banks = {
 
   byCountry: (code: string) =>
     apiRequest<any[]>(`/banks/country/${code}`),
+};
+
+export const beneficiaries = {
+  list: () =>
+    apiRequest<any[]>('/beneficiaries'),
+
+  get: (id: string) =>
+    apiRequest<any>(`/beneficiaries/${id}`),
+
+  create: (data: {
+    name: string;
+    email?: string;
+    bankName: string;
+    bankCountry: string;
+    bankCountryCode: string;
+    swiftCode: string;
+    accountNumber: string;
+    currency?: string;
+  }) =>
+    apiRequest<any>('/beneficiaries', { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (id: string, data: any) =>
+    apiRequest<any>(`/beneficiaries/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiRequest<any>(`/beneficiaries/${id}`, { method: 'DELETE' }),
+
+  toggleFavorite: (id: string) =>
+    apiRequest<any>(`/beneficiaries/${id}/favorite`, { method: 'PUT' }),
 };
 
 export async function logout() {
