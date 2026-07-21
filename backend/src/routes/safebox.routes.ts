@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { validate } from '../middleware/validate.middleware';
 import { authenticate } from '../middleware/auth.middleware';
 import * as safeboxService from '../services/safebox.service';
+import * as authService from '../services/auth.service';
 
 const router = Router();
 
@@ -14,11 +15,13 @@ const createSchema = z.object({
 const depositSchema = z.object({
   amount: z.number().positive(),
   senderAccountId: z.string(),
+  transactionPin: z.string().length(4).regex(/^\d+$/, 'PIN must be 4 digits'),
 });
 
 const withdrawSchema = z.object({
   amount: z.number().positive(),
   recipientAccountId: z.string(),
+  transactionPin: z.string().length(4).regex(/^\d+$/, 'PIN must be 4 digits'),
 });
 
 router.get('/', authenticate, async (req: Request, res: Response) => {
@@ -50,6 +53,7 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
 
 router.post('/:id/deposit', authenticate, validate(depositSchema), async (req: Request, res: Response) => {
   try {
+    await authService.verifyTransactionPin(req.user!.userId, req.body.transactionPin);
     const transfer = await safeboxService.deposit(req.user!.userId, req.params.id, req.body.amount, req.body.senderAccountId);
     res.json(transfer);
   } catch (err: any) {
@@ -59,6 +63,7 @@ router.post('/:id/deposit', authenticate, validate(depositSchema), async (req: R
 
 router.post('/:id/withdraw', authenticate, validate(withdrawSchema), async (req: Request, res: Response) => {
   try {
+    await authService.verifyTransactionPin(req.user!.userId, req.body.transactionPin);
     const transfer = await safeboxService.withdraw(req.user!.userId, req.params.id, req.body.amount, req.body.recipientAccountId);
     res.json(transfer);
   } catch (err: any) {

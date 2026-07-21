@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import { accounts, transfers, categories, wire, banks as banksApi, beneficiaries as benefApi } from '../api/client';
 import { GlassCard } from '../components/ui/glass-card';
 import BankSelect from '../components/BankSelect';
+import PinModal from '../components/PinModal';
+import SetPinModal from '../components/SetPinModal';
 import {
   IconSend, IconCheck, IconSearch, IconUser, IconBuilding, IconClock,
   IconArrowRight, IconPlus, IconDownload, IconGlobe, IconLandmark,
@@ -70,7 +72,7 @@ function getWireArrival(estimatedArrival?: string | Date): string {
 }
 
 export default function TransferPage() {
-  const { user } = useAuth();
+  const { user, pinSet, refreshPinStatus } = useAuth();
   const location = useLocation();
   const wireBeneficiaryFromNav = (location.state as any)?.wireBeneficiary;
   const [accountList, setAccountList] = useState<any[]>([]);
@@ -78,6 +80,10 @@ export default function TransferPage() {
   const [recentTransfers, setRecentTransfers] = useState<any[]>([]);
   const [dailyUsed, setDailyUsed] = useState(0);
   const [savedBeneficiaries, setSavedBeneficiaries] = useState<any[]>([]);
+
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [showSetPinModal, setShowSetPinModal] = useState(false);
+  const [pendingSend, setPendingSend] = useState(false);
 
   const [mode, setMode] = useState<'internal' | 'wire'>('internal');
   const [step, setStep] = useState<'form' | 'review' | 'confirm'>('form');
@@ -226,6 +232,18 @@ export default function TransferPage() {
     if (!senderAccountId) { toast.error('Select a source account'); return; }
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) { toast.error('Enter a valid amount'); return; }
+    if (!pinSet) {
+      setShowSetPinModal(true);
+      return;
+    }
+    setPinModalOpen(true);
+  };
+
+  const executeTransfer = async (pinCode: string) => {
+    setPinModalOpen(false);
+    if (!senderAccountId) { toast.error('Select a source account'); return; }
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) { toast.error('Enter a valid amount'); return; }
     setSending(true);
     try {
       if (mode === 'wire') {
@@ -243,6 +261,7 @@ export default function TransferPage() {
           currency: sendCurrency,
           receiveCurrency,
           purposeOfTransfer: purposeOfTransfer.trim() || undefined,
+          transactionPin: pinCode,
         });
         setLastTransfer(result);
       } else {
@@ -252,6 +271,7 @@ export default function TransferPage() {
           description: description || undefined,
           senderAccountId,
           categoryId: categoryId || null,
+          transactionPin: pinCode,
         });
         setLastTransfer(result);
       }
@@ -889,6 +909,19 @@ export default function TransferPage() {
           )}
         </motion.div>
       </div>
+
+      <PinModal
+        open={pinModalOpen}
+        onClose={() => setPinModalOpen(false)}
+        onSuccess={executeTransfer}
+        title="Confirm Transfer"
+        subtitle="Enter your PIN to authorize this transaction"
+      />
+      <SetPinModal
+        open={showSetPinModal}
+        onClose={() => setShowSetPinModal(false)}
+        onSuccess={async () => { setShowSetPinModal(false); await refreshPinStatus(); setPinModalOpen(true); }}
+      />
     </motion.div>
   );
 }

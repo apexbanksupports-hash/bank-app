@@ -5,11 +5,15 @@ import { accounts, safebox } from '../api/client';
 import { GlassCard } from '../components/ui/glass-card';
 import CountUp from '../components/CountUp';
 import { IconShield, IconPlus, IconArrowUp, IconArrowDown, IconBuilding } from '../components/Icons';
+import { useAuth } from '../hooks/useAuth';
+import PinModal from '../components/PinModal';
+import SetPinModal from '../components/SetPinModal';
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 } };
 
 export default function SafeBoxPage() {
+  const { pinSet, refreshPinStatus } = useAuth();
   const [safeBoxes, setSafeBoxes] = useState<any[]>([]);
   const [accountList, setAccountList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +25,10 @@ export default function SafeBoxPage() {
   const [withdrawBox, setWithdrawBox] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [selectedAccount, setSelectedAccount] = useState('');
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [showSetPinModal, setShowSetPinModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'deposit' | 'withdraw' | null>(null);
+  const [pendingBoxId, setPendingBoxId] = useState<string | null>(null);
 
   const fetch = async () => {
     try {
@@ -43,28 +51,40 @@ export default function SafeBoxPage() {
     } catch (err: any) { toast.error(err.message); } finally { setCreating(false); }
   };
 
-  const handleDeposit = async (id: string) => {
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) { toast.error('Enter a valid amount'); return; }
-    if (!selectedAccount) { toast.error('Select a source account'); return; }
-    try {
-      await safebox.deposit(id, numAmount, selectedAccount);
-      toast.success('Deposited to SafeBox!');
-      setDepositBox(null); setAmount('');
-      fetch();
-    } catch (err: any) { toast.error(err.message); }
+  const handleDepositClick = (id: string) => {
+    if (!pinSet) { setShowSetPinModal(true); return; }
+    setPendingAction('deposit');
+    setPendingBoxId(id);
+    setPinModalOpen(true);
   };
 
-  const handleWithdraw = async (id: string) => {
+  const handleWithdrawClick = (id: string) => {
+    if (!pinSet) { setShowSetPinModal(true); return; }
+    setPendingAction('withdraw');
+    setPendingBoxId(id);
+    setPinModalOpen(true);
+  };
+
+  const executeAction = async (pinCode: string) => {
+    setPinModalOpen(false);
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) { toast.error('Enter a valid amount'); return; }
-    if (!selectedAccount) { toast.error('Select a destination account'); return; }
+    if (!selectedAccount) { toast.error(pendingAction === 'deposit' ? 'Select a source account' : 'Select a destination account'); return; }
     try {
-      await safebox.withdraw(id, numAmount, selectedAccount);
-      toast.success('Withdrawn from SafeBox!');
-      setWithdrawBox(null); setAmount('');
+      if (pendingAction === 'deposit' && pendingBoxId) {
+        await safebox.deposit(pendingBoxId, numAmount, selectedAccount, pinCode);
+        toast.success('Deposited to SafeBox!');
+        setDepositBox(null);
+      } else if (pendingAction === 'withdraw' && pendingBoxId) {
+        await safebox.withdraw(pendingBoxId, numAmount, selectedAccount, pinCode);
+        toast.success('Withdrawn from SafeBox!');
+        setWithdrawBox(null);
+      }
+      setAmount('');
       fetch();
     } catch (err: any) { toast.error(err.message); }
+    setPendingAction(null);
+    setPendingBoxId(null);
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" /></div>;
@@ -187,7 +207,7 @@ export default function SafeBoxPage() {
                         <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Amount</label>
                         <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none transition-all" placeholder="0.00" min="0.01" step="0.01" />
                       </div>
-                      <button onClick={() => handleDeposit(box.id)} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-400 transition-all">
+                      <button onClick={() => handleDepositClick(box.id)} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-400 transition-all">
                         <IconArrowDown size={16} /> Deposit
                       </button>
                     </div>
@@ -207,7 +227,7 @@ export default function SafeBoxPage() {
                         <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Amount</label>
                         <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none transition-all" placeholder="0.00" min="0.01" step="0.01" />
                       </div>
-                      <button onClick={() => handleWithdraw(box.id)} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-rose-500 text-white text-sm font-medium hover:bg-rose-400 transition-all">
+                      <button onClick={() => handleWithdrawClick(box.id)} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-rose-500 text-white text-sm font-medium hover:bg-rose-400 transition-all">
                         <IconArrowUp size={16} /> Withdraw
                       </button>
                     </div>
@@ -218,6 +238,19 @@ export default function SafeBoxPage() {
           })
         )}
       </motion.div>
+
+      <PinModal
+        open={pinModalOpen}
+        onClose={() => { setPinModalOpen(false); setPendingAction(null); setPendingBoxId(null); }}
+        onSuccess={executeAction}
+        title="Confirm Transaction"
+        subtitle="Enter your PIN to authorize this SafeBox transaction"
+      />
+      <SetPinModal
+        open={showSetPinModal}
+        onClose={() => setShowSetPinModal(false)}
+        onSuccess={async () => { setShowSetPinModal(false); await refreshPinStatus(); setPinModalOpen(true); }}
+      />
     </motion.div>
   );
 }

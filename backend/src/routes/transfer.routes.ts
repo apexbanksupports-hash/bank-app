@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { validate } from '../middleware/validate.middleware';
 import { authenticate } from '../middleware/auth.middleware';
 import * as transferService from '../services/transfer.service';
+import * as authService from '../services/auth.service';
 
 const router = Router();
 
@@ -12,10 +13,12 @@ const sendMoneySchema = z.object({
   description: z.string().max(200).optional(),
   senderAccountId: z.string(),
   categoryId: z.string().nullable().optional(),
+  transactionPin: z.string().length(4).regex(/^\d+$/, 'PIN must be 4 digits'),
 });
 
 router.post('/', authenticate, validate(sendMoneySchema), async (req: Request, res: Response) => {
   try {
+    await authService.verifyTransactionPin(req.user!.userId, req.body.transactionPin);
     const transfer = await transferService.sendMoney({
       senderId: req.user!.userId,
       recipientAccountNumber: req.body.recipientAccountNumber,

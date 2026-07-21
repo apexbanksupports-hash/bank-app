@@ -3,17 +3,24 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { accounts as accountsApi } from '../api/client';
 import { GlassCard } from '../components/ui/glass-card';
-import { IconBuilding, IconPlus } from '../components/Icons';
+import { IconBuilding, IconPlus, IconEye, IconEyeOff } from '../components/Icons';
+import { useAuth } from '../hooks/useAuth';
+import PinModal from '../components/PinModal';
+import SetPinModal from '../components/SetPinModal';
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 } };
 
 export default function AccountsPage() {
+  const { pinSet, refreshPinStatus } = useAuth();
   const [accountList, setAccountList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [accountType, setAccountType] = useState('savings');
+  const [showBal, setShowBal] = useState(false);
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [showSetPinModal, setShowSetPinModal] = useState(false);
 
   const fetchAccounts = async () => {
     try { setAccountList(await accountsApi.list()); } catch (err: any) { toast.error(err.message); } finally { setLoading(false); }
@@ -31,6 +38,18 @@ export default function AccountsPage() {
     } catch (err: any) { toast.error(err.message); } finally { setCreating(false); }
   };
 
+  const handleToggleBalance = () => {
+    if (showBal) {
+      setShowBal(false);
+    } else {
+      if (!pinSet) {
+        setShowSetPinModal(true);
+      } else {
+        setPinModalOpen(true);
+      }
+    }
+  };
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" /></div>;
 
   return (
@@ -40,9 +59,15 @@ export default function AccountsPage() {
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Accounts</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>Manage your bank accounts</p>
         </div>
-        <button onClick={() => setShowCreate(!showCreate)} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/25">
-          {showCreate ? 'Cancel' : '+ New Account'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleToggleBalance} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all border" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
+            {showBal ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+            {showBal ? 'Hide' : 'Show'} Balances
+          </button>
+          <button onClick={() => setShowCreate(!showCreate)} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/25">
+            {showCreate ? 'Cancel' : '+ New Account'}
+          </button>
+        </div>
       </motion.div>
 
       {showCreate && (
@@ -89,7 +114,9 @@ export default function AccountsPage() {
                   </div>
                 </div>
                 <div className="sm:text-right sm:shrink-0 pl-16 sm:pl-0">
-                  <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>${acc.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                    {showBal ? `$${acc.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••••'}
+                  </p>
                   <p className="text-xs sm:text-sm" style={{ color: 'var(--text-muted)' }}>Available Balance</p>
                 </div>
               </div>
@@ -97,6 +124,19 @@ export default function AccountsPage() {
           ))
         )}
       </motion.div>
+
+      <PinModal
+        open={pinModalOpen}
+        onClose={() => setPinModalOpen(false)}
+        onSuccess={() => { setPinModalOpen(false); setShowBal(true); }}
+        title="Verify Identity"
+        subtitle="Enter your PIN to view balances"
+      />
+      <SetPinModal
+        open={showSetPinModal}
+        onClose={() => setShowSetPinModal(false)}
+        onSuccess={async () => { setShowSetPinModal(false); await refreshPinStatus(); setPinModalOpen(true); }}
+      />
     </motion.div>
   );
 }

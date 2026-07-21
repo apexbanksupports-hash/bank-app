@@ -102,7 +102,7 @@ export const accounts = {
 };
 
 export const transfers = {
-  send: (data: { recipientAccountNumber: string; amount: number; description?: string; senderAccountId: string; categoryId?: string | null }) =>
+  send: (data: { recipientAccountNumber: string; amount: number; description?: string; senderAccountId: string; categoryId?: string | null; transactionPin: string }) =>
     apiRequest<any>('/transfers', { method: 'POST', body: JSON.stringify(data) }),
 
   reverse: (id: string) =>
@@ -209,11 +209,11 @@ export const safebox = {
   get: (id: string) =>
     apiRequest<any>(`/safebox/${id}`),
 
-  deposit: (id: string, amount: number, senderAccountId: string) =>
-    apiRequest<any>(`/safebox/${id}/deposit`, { method: 'POST', body: JSON.stringify({ amount, senderAccountId }) }),
+  deposit: (id: string, amount: number, senderAccountId: string, transactionPin: string) =>
+    apiRequest<any>(`/safebox/${id}/deposit`, { method: 'POST', body: JSON.stringify({ amount, senderAccountId, transactionPin }) }),
 
-  withdraw: (id: string, amount: number, recipientAccountId: string) =>
-    apiRequest<any>(`/safebox/${id}/withdraw`, { method: 'POST', body: JSON.stringify({ amount, recipientAccountId }) }),
+  withdraw: (id: string, amount: number, recipientAccountId: string, transactionPin: string) =>
+    apiRequest<any>(`/safebox/${id}/withdraw`, { method: 'POST', body: JSON.stringify({ amount, recipientAccountId, transactionPin }) }),
 };
 
 export const entertainment = {
@@ -280,6 +280,7 @@ export const wire = {
     purposeOfTransfer?: string;
     correspondentBank?: string;
     correspondentSwift?: string;
+    transactionPin: string;
   }) =>
     apiRequest<any>('/wire', { method: 'POST', body: JSON.stringify(data) }),
 
@@ -345,6 +346,20 @@ export const beneficiaries = {
 
   toggleFavorite: (id: string) =>
     apiRequest<any>(`/beneficiaries/${id}/favorite`, { method: 'PUT' }),
+};
+
+export const pin = {
+  status: () =>
+    apiRequest<{ pinSet: boolean }>('/auth/pin/status'),
+
+  set: (password: string, pinCode: string) =>
+    apiRequest<{ message: string }>('/auth/pin/set', { method: 'POST', body: JSON.stringify({ password, pin: pinCode }) }),
+
+  verify: (pinCode: string) =>
+    apiRequest<{ valid: boolean }>('/auth/pin/verify', { method: 'POST', body: JSON.stringify({ pin: pinCode }) }),
+
+  change: (currentPin: string, newPin: string) =>
+    apiRequest<{ message: string }>('/auth/pin/change', { method: 'POST', body: JSON.stringify({ currentPin, newPin }) }),
 };
 
 export async function logout() {

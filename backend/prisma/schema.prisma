@@ -22,6 +22,8 @@ model User {
   role           String        @default("user")
   emailVerified  Boolean       @default(false)
   emailVerificationToken String?
+  transactionPin String?
+  pinSet         Boolean       @default(false)
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

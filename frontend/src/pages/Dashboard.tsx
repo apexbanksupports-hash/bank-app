@@ -16,6 +16,8 @@ import {
 import { accounts, transfers, schedule, notifications as notifApi, statements, safebox, entertainment } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../lib/cn';
+import PinModal from '../components/PinModal';
+import SetPinModal from '../components/SetPinModal';
 
 /* ── Constants ── */
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
@@ -230,7 +232,7 @@ function Widget({ children, className, as: Comp = motion.div }: { children: Reac
 
 /* ═══════════════════ WIDGETS ═══════════════════ */
 
-function InsightHero({ firstName, totalBalance, accountCount, showBal, setShowBal, user }: any) {
+function InsightHero({ firstName, totalBalance, accountCount, showBal, onToggleBal, user }: any) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   return (
@@ -285,7 +287,7 @@ function InsightHero({ firstName, totalBalance, accountCount, showBal, setShowBa
                 <p className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
                   <Mask show={showBal}>$<CountUp value={totalBalance} /></Mask>
                 </p>
-                <button onClick={() => setShowBal(!showBal)} className="p-1 rounded-lg transition-all hover:bg-white/5 active:scale-90" style={{ color: 'var(--text-muted)' }}>
+                <button onClick={onToggleBal} className="p-1 rounded-lg transition-all hover:bg-white/5 active:scale-90" style={{ color: 'var(--text-muted)' }}>
                   {showBal ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -711,8 +713,10 @@ function DashboardSkeleton() {
 
 /* ═══════════════════ MAIN DASHBOARD ═══════════════════ */
 export default function Dashboard() {
-  const { user } = useAuth();
-  const [showBal, setShowBal] = useState(true);
+  const { user, pinSet, refreshPinStatus } = useAuth();
+  const [showBal, setShowBal] = useState(false);
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [showSetPinModal, setShowSetPinModal] = useState(false);
   const [accountList, setAccountList] = useState<any[]>([]);
   const [recentTransfers, setRecentTransfers] = useState<any[]>([]);
   const [scheduledList, setScheduledList] = useState<any[]>([]);
@@ -779,11 +783,23 @@ export default function Dashboard() {
   const totalSaved = safeBoxes.reduce((s, b) => s + b.balance, 0);
   const upcomingSchedules = scheduledList.filter((s: any) => new Date(s.nextRunDate) > new Date()).slice(0, 2);
 
+  const handleToggleBalance = () => {
+    if (showBal) {
+      setShowBal(false);
+    } else {
+      if (!pinSet) {
+        setShowSetPinModal(true);
+      } else {
+        setPinModalOpen(true);
+      }
+    }
+  };
+
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 auto-rows-min">
         {/* Hero */}
-        <InsightHero firstName={user?.firstName || 'User'} totalBalance={totalBalance} accountCount={accountList.length} showBal={showBal} setShowBal={setShowBal} user={user} />
+        <InsightHero firstName={user?.firstName || 'User'} totalBalance={totalBalance} accountCount={accountList.length} showBal={showBal} onToggleBal={handleToggleBalance} user={user} />
 
         {/* Quick Actions */}
         <QuickActionsGrid />
@@ -808,6 +824,19 @@ export default function Dashboard() {
         {/* Tip */}
         <TipBanner activeTips={activeTips} currentTip={currentTip} setActiveTips={setActiveTips} setCurrentTip={setCurrentTip} />
       </div>
+
+      <PinModal
+        open={pinModalOpen}
+        onClose={() => setPinModalOpen(false)}
+        onSuccess={() => { setPinModalOpen(false); setShowBal(true); }}
+        title="Verify Identity"
+        subtitle="Enter your PIN to view balance"
+      />
+      <SetPinModal
+        open={showSetPinModal}
+        onClose={() => setShowSetPinModal(false)}
+        onSuccess={async () => { setShowSetPinModal(false); await refreshPinStatus(); setPinModalOpen(true); }}
+      />
     </motion.div>
   );
 }

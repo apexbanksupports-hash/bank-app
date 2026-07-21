@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { auth } from '../api/client';
+import { auth, pin as pinApi } from '../api/client';
 
 interface User {
   id: string;
@@ -16,22 +16,36 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
+  pinSet: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  refreshPinStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   token: null,
   loading: true,
+  pinSet: false,
   login: () => {},
   logout: () => {},
+  refreshPinStatus: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const [pinSet, setPinSet] = useState(false);
+
+  const refreshPinStatus = useCallback(async () => {
+    try {
+      const status = await pinApi.status();
+      setPinSet(status.pinSet);
+    } catch {
+      setPinSet(false);
+    }
+  }, []);
 
   const fetchProfile = useCallback(async () => {
     if (!token) {
@@ -41,10 +55,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await auth.getProfile();
       setUser(profile);
+      try {
+        const status = await pinApi.status();
+        setPinSet(status.pinSet);
+      } catch {
+        setPinSet(false);
+      }
     } catch {
       localStorage.removeItem('token');
       setToken(null);
       setUser(null);
+      setPinSet(false);
     } finally {
       setLoading(false);
     }
@@ -64,10 +85,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    setPinSet(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, pinSet, login, logout, refreshPinStatus }}>
       {children}
     </AuthContext.Provider>
   );

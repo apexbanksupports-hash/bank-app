@@ -154,6 +154,57 @@ export async function verifyTwoFactorLogin(userId: string, token: string) {
   };
 }
 
+export async function setTransactionPin(userId: string, password: string, pin: string) {
+  if (!/^\d{4}$/.test(pin)) throw new Error('PIN must be exactly 4 digits');
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('User not found');
+
+  const validPassword = await bcrypt.compare(password, user.password);
+  if (!validPassword) throw new Error('Invalid password');
+
+  const hashedPin = await bcrypt.hash(pin, 10);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { transactionPin: hashedPin, pinSet: true },
+  });
+  return { message: 'Transaction PIN set successfully' };
+}
+
+export async function verifyTransactionPin(userId: string, pin: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.transactionPin) throw new Error('Transaction PIN not set');
+
+  const valid = await bcrypt.compare(pin, user.transactionPin);
+  if (!valid) throw new Error('Invalid transaction PIN');
+  return { valid: true };
+}
+
+export async function hasTransactionPin(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { pinSet: true },
+  });
+  return { pinSet: user?.pinSet ?? false };
+}
+
+export async function changeTransactionPin(userId: string, currentPin: string, newPin: string) {
+  if (!/^\d{4}$/.test(newPin)) throw new Error('New PIN must be exactly 4 digits');
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.transactionPin) throw new Error('Transaction PIN not set');
+
+  const validCurrent = await bcrypt.compare(currentPin, user.transactionPin);
+  if (!validCurrent) throw new Error('Invalid current PIN');
+
+  const hashedPin = await bcrypt.hash(newPin, 10);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { transactionPin: hashedPin },
+  });
+  return { message: 'Transaction PIN changed successfully' };
+}
+
 export async function getUserProfile(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

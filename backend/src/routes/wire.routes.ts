@@ -7,6 +7,7 @@ import { sendWireTransferReceipt } from '../services/email.service';
 import { generateWireReferenceNumber, generateTrackingNumber, calculateWireFee, getEstimatedArrival } from '../utils/wireReference';
 import { convertCurrency, getExchangeRate, getSupportedCurrencies } from '../utils/currency';
 import { validateSwiftCode } from '../utils/swift';
+import * as authService from '../services/auth.service';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -28,10 +29,12 @@ const wireSchema = z.object({
   purposeOfTransfer: z.string().max(200).optional(),
   correspondentBank: z.string().max(200).optional(),
   correspondentSwift: z.string().max(11).optional(),
+  transactionPin: z.string().length(4).regex(/^\d+$/, 'PIN must be 4 digits'),
 });
 
 router.post('/', authenticate, validate(wireSchema), async (req: Request, res: Response) => {
   try {
+    await authService.verifyTransactionPin(req.user!.userId, req.body.transactionPin);
     const body = req.body;
 
     const swiftValidation = validateSwiftCode(body.swiftCode);

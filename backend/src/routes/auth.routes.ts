@@ -105,4 +105,54 @@ router.get('/profile', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+const setPinSchema = z.object({
+  password: z.string().min(1, 'Password is required'),
+  pin: z.string().length(4, 'PIN must be exactly 4 digits').regex(/^\d+$/, 'PIN must contain only digits'),
+});
+
+const verifyPinSchema = z.object({
+  pin: z.string().length(4).regex(/^\d+$/),
+});
+
+const changePinSchema = z.object({
+  currentPin: z.string().length(4).regex(/^\d+$/),
+  newPin: z.string().length(4).regex(/^\d+$/),
+});
+
+router.post('/pin/set', authenticate, validate(setPinSchema), async (req: Request, res: Response) => {
+  try {
+    const result = await authService.setTransactionPin(req.user!.userId, req.body.password, req.body.pin);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/pin/verify', authenticate, validate(verifyPinSchema), async (req: Request, res: Response) => {
+  try {
+    const result = await authService.verifyTransactionPin(req.user!.userId, req.body.pin);
+    res.json(result);
+  } catch (err: any) {
+    res.status(401).json({ error: err.message });
+  }
+});
+
+router.post('/pin/change', authenticate, validate(changePinSchema), async (req: Request, res: Response) => {
+  try {
+    const result = await authService.changeTransactionPin(req.user!.userId, req.body.currentPin, req.body.newPin);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/pin/status', authenticate, async (req: Request, res: Response) => {
+  try {
+    const result = await authService.hasTransactionPin(req.user!.userId);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 export default router;
