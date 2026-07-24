@@ -184,7 +184,7 @@ async function sendEmail(options: {
     htmlContent: options.html,
     sender: {
       name: process.env.BREVO_SENDER_NAME || 'NOVA CREDIT UNION',
-      email: process.env.BREVO_FROM_EMAIL || 'noreply@novacu.com',
+      email: process.env.BREVO_FROM_EMAIL || 'apexbanksupports@gmail.com',
     },
     to: [{ email: options.to }],
   });

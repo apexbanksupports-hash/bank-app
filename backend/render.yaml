@@ -16,7 +16,7 @@ services:
       - key: BREVO_API_KEY
         value: YOUR_BREVO_API_KEY_HERE
       - key: BREVO_FROM_EMAIL
-        value: noreply@novacu.com
+        value: apexbanksupports@gmail.com
       - key: BREVO_SENDER_NAME
         value: NOVA CREDIT UNION
       - key: SUPPORT_PHONE
