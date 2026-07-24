@@ -1,22 +1,10 @@
-import nodemailer from 'nodemailer';
-import sgMail from '@sendgrid/mail';
+import { BrevoClient } from '@getbrevo/brevo';
 
-const USE_SENDGRID = !!process.env.SENDGRID_API_KEY;
+const BREVO_CONFIGURED = !!process.env.BREVO_API_KEY;
 
-if (USE_SENDGRID) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
-}
-
-const transporter = USE_SENDGRID
-  ? null
-  : nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'sandbox.smtp.mailtrap.io',
-      port: parseInt(process.env.SMTP_PORT || '2525'),
-      auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASS || '',
-      },
-    });
+const brevo = BREVO_CONFIGURED
+  ? new BrevoClient({ apiKey: process.env.BREVO_API_KEY! })
+  : null;
 
 function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -186,28 +174,20 @@ async function sendEmail(options: {
   subject: string;
   html: string;
 }) {
-  if (USE_SENDGRID) {
-    await sgMail.send({
-      to: options.to,
-      from: {
-        email: process.env.SENDGRID_FROM_EMAIL || 'noreply@novacu.com',
-        name: process.env.SENDGRID_FROM_NAME || 'NOVA CREDIT UNION',
-      },
-      subject: options.subject,
-      html: options.html,
-    });
-  } else {
-    if (!process.env.SMTP_HOST) {
-      console.log('SMTP not configured — skipping email send to', options.to);
-      return;
-    }
-    await transporter!.sendMail({
-      from: `"${process.env.SENDGRID_FROM_NAME || 'NOVA CREDIT UNION'}" <${process.env.SENDGRID_FROM_EMAIL || 'noreply@novacu.com'}>`,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-    });
+  if (!brevo) {
+    console.log('Brevo not configured — skipping email send to', options.to);
+    return;
   }
+
+  await brevo.transactionalEmails.sendTransacEmail({
+    subject: options.subject,
+    htmlContent: options.html,
+    sender: {
+      name: process.env.BREVO_SENDER_NAME || 'NOVA CREDIT UNION',
+      email: process.env.BREVO_FROM_EMAIL || 'noreply@novacu.com',
+    },
+    to: [{ email: options.to }],
+  });
 }
 
 export async function sendWireTransferReceipt(data: {
@@ -285,11 +265,8 @@ export async function sendTransferReceipt(transfer: {
   sender: { firstName: string; lastName: string; email: string };
   recipient: { firstName: string; lastName: string; email: string };
 }) {
-  const smtpConfigured = !!process.env.SMTP_HOST;
-  const sendgridConfigured = !!process.env.SENDGRID_API_KEY;
-
-  if (!smtpConfigured && !sendgridConfigured) {
-    console.log('No email transport configured — skipping receipt email');
+  if (!BREVO_CONFIGURED) {
+    console.log('Brevo not configured — skipping receipt email');
     console.log('Would send receipt to:', transfer.recipient.email);
     return;
   }

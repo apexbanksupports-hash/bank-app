@@ -13,9 +13,11 @@ services:
         value: postgresql://postgres.logiumjyfecwcssjlpmz:numagyong01@aws-0-eu-west-1.pooler.supabase.com:5432/postgres
       - key: CORS_ORIGINS
         value: https://bank-app-ten-sigma.vercel.app
-      - key: SENDGRID_FROM_EMAIL
+      - key: BREVO_API_KEY
+        value: YOUR_BREVO_API_KEY_HERE
+      - key: BREVO_FROM_EMAIL
         value: noreply@novacu.com
-      - key: SENDGRID_FROM_NAME
+      - key: BREVO_SENDER_NAME
         value: NOVA CREDIT UNION
       - key: SUPPORT_PHONE
         value: '+1 (302) 290-6516'
