@@ -314,7 +314,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
         {/* Typography */}
         <div className="mt-8 flex flex-col items-center gap-1">
           <TypeReveal
-            text="APEX"
+            text="NOVA"
             delay={0.3}
             className="text-5xl font-bold tracking-[0.15em]"
             style={{ color: 'var(--text-primary)' }}
@@ -327,7 +327,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
               className="text-sm font-semibold uppercase tracking-[0.25em] mt-1"
               style={{ color: 'var(--text-muted)' }}
             >
-              Banking
+              Credit Union
             </motion.span>
           )}
         </div>
@@ -341,7 +341,7 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
             className="mt-10 text-sm font-light tracking-[0.08em]"
             style={{ color: 'var(--text-muted)' }}
           >
-            Where ambition meets altitude
+            Where your money grows
           </motion.p>
         )}
 

@@ -163,7 +163,7 @@ function BankCard({ acc, index, showBal }: { acc: any; index: number; showBal: b
       <div className="absolute bottom-0 left-0 w-36 h-36 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/4" />
       <div className="relative flex flex-col h-full">
         <div className="flex items-start justify-between">
-          <span className="text-[11px] font-bold text-white/70 tracking-[1.5px]">APEX BANK</span>
+          <span className="text-[11px] font-bold text-white/70 tracking-[1.5px]">NOVA CREDIT UNION</span>
           <div className="flex items-center gap-2">
             <span className={style.chip}><ChipIcon size={24} /></span>
             <span className="text-[9px] font-semibold text-white/60 uppercase tracking-wider">{style.label}</span>

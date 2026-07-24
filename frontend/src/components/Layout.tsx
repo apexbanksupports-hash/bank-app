@@ -8,7 +8,7 @@ import {
   IconHome, IconBuilding, IconSend, IconClock, IconShield, IconGamepad,
   IconCalendar, IconTags, IconFileText, IconUser, IconSettings, IconBell,
   IconSun, IconMoon, IconLogout, IconSearch, IconMenu, IconClose, IconCard,
-  IconGlobe, ApexLogo,
+  IconGlobe, NovaLogo,
 } from './Icons';
 
 interface NavItem { path: string; label: string; icon: React.ReactNode; }
@@ -116,10 +116,10 @@ export default function Layout() {
         }}
       >
         <Link to="/dashboard" className="flex items-center gap-2">
-          <ApexLogo size={24} />
+          <NovaLogo size={24} />
           <div className="flex flex-col leading-none">
-            <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>APEX</span>
-            <span className="text-[8px] font-semibold tracking-[0.8px]" style={{ color: 'var(--text-muted)' }}>BANK</span>
+            <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>NOVA</span>
+            <span className="text-[8px] font-semibold tracking-[0.8px]" style={{ color: 'var(--text-muted)' }}>CREDIT UNION</span>
           </div>
         </Link>
         <div className="flex items-center gap-1">
@@ -222,10 +222,10 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between px-6">
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-2.5 shrink-0">
-            <ApexLogo size={30} />
+            <NovaLogo size={30} />
             <div className="flex flex-col">
-              <span className="text-sm font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>APEX</span>
-              <span className="text-[10px] font-semibold tracking-[1px]" style={{ color: 'var(--text-muted)' }}>BANK</span>
+              <span className="text-sm font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>NOVA</span>
+              <span className="text-[10px] font-semibold tracking-[1px]" style={{ color: 'var(--text-muted)' }}>CREDIT UNION</span>
             </div>
           </Link>
 

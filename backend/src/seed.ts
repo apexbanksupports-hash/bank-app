@@ -8,10 +8,10 @@ async function main() {
   const adminPw = await bcrypt.hash('admin123', 12);
 
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@apexbank.com' },
+    where: { email: 'admin@novacu.com' },
     update: {},
     create: {
-      email: 'admin@apexbank.com',
+      email: 'admin@novacu.com',
       password: adminPw,
       firstName: 'Admin',
       lastName: 'User',
@@ -136,7 +136,7 @@ async function main() {
     data: {
       userId: alice.id,
       type: 'welcome',
-      title: 'Welcome to BankApp!',
+      title: 'Welcome to Nova Credit Union!',
       message: 'Your account has been created successfully. Start by exploring the dashboard.',
       link: '/dashboard',
     },
@@ -147,7 +147,7 @@ async function main() {
   console.log('Demo accounts:');
   console.log('  alice@demo.com / password123');
   console.log('  bob@demo.com / password123');
-  console.log('  admin@apexbank.com / admin123');
+  console.log('  admin@novacu.com / admin123');
   console.log('---');
   console.log('Alice has 2 accounts: checking (1000000001) + savings (1000000003)');
   console.log('Bob has 1 account: checking (1000000002)');

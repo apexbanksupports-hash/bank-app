@@ -14,12 +14,12 @@ services:
       - key: CORS_ORIGINS
         value: https://bank-app-ten-sigma.vercel.app
       - key: SENDGRID_FROM_EMAIL
-        value: noreply@apexbank.com
+        value: noreply@novacu.com
       - key: SENDGRID_FROM_NAME
-        value: APEX BANK
+        value: NOVA CREDIT UNION
       - key: SUPPORT_PHONE
         value: '+1 (302) 290-6516'
       - key: SUPPORT_EMAIL
-        value: support@apexbank.com
+        value: support@novacu.com
       - key: LOGO_URL
-        value: https://apexbank.com/logo.png
+        value: https://novacu.com/logo.png

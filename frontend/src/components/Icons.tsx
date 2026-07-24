@@ -151,7 +151,7 @@ export function IconRefresh(p: IconProps) {
 
 type LogoProps = { size?: number; className?: string; mono?: boolean };
 
-export function ApexLogo(p: LogoProps) {
+export function NovaLogo(p: LogoProps) {
   const sz = p.size ?? 32;
   const gid = p.mono ? '' : 'url(#lg)';
   return (
@@ -172,7 +172,7 @@ export function ApexLogo(p: LogoProps) {
       <path d="M16 7l10 16H6l10-16z" fill="#ffffff" />
       {/* Summit highlight */}
       <path d="M16 9l6 10H10l6-10z" fill={p.mono ? '#3b82f6' : gid} />
-      {/* Apex dot */}
+      {/* Summit dot */}
       <circle cx="16" cy="8" r="1.5" fill="#ffffff" />
     </svg>
   );

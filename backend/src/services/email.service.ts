@@ -72,7 +72,7 @@ function generateReceiptHtml(data: {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Apex Bank Receipt</title>
+<title>Nova Credit Union Receipt</title>
 <style>
 body{margin:0;padding:0;background:#0f172a;font-family:Arial,Helvetica,sans-serif}
 .wrapper{width:100%;padding:30px 10px;background:#0f172a}
@@ -110,7 +110,7 @@ td{padding:12px 0;border-bottom:1px solid #374151}
 <div class="wrapper">
 <div class="container">
 <div class="header">
-<img src="${data.logoUrl}" alt="Apex Bank" class="logo">
+<img src="${data.logoUrl}" alt="Nova Credit Union" class="logo">
 <div class="success-badge">✓</div>
 <div class="status">${statusText}</div>
 <div class="amount">$${data.totalPaid}</div>
@@ -158,12 +158,12 @@ Please verify all beneficiary and transfer information carefully. Once funds are
 
 <div class="footer">
 <div class="footer-text">
-Thank you for banking with <strong>Apex Bank</strong>.<br><br>
+Thank you for banking with <strong>Nova Credit Union</strong>.<br><br>
 <span class="support">${data.supportPhone}</span><br>
 <span class="support">${data.supportEmail}</span><br><br>
 This is an automated transaction receipt.<br>
 Please do not reply directly to this email.<br><br>
-&copy; ${data.currentYear} Apex Bank. All rights reserved.
+&copy; ${data.currentYear} Nova Credit Union. All rights reserved.
 </div>
 </div>
 </div>
@@ -190,8 +190,8 @@ async function sendEmail(options: {
     await sgMail.send({
       to: options.to,
       from: {
-        email: process.env.SENDGRID_FROM_EMAIL || 'noreply@apexbank.com',
-        name: process.env.SENDGRID_FROM_NAME || 'APEX BANK',
+        email: process.env.SENDGRID_FROM_EMAIL || 'noreply@novacu.com',
+        name: process.env.SENDGRID_FROM_NAME || 'NOVA CREDIT UNION',
       },
       subject: options.subject,
       html: options.html,
@@ -202,7 +202,7 @@ async function sendEmail(options: {
       return;
     }
     await transporter!.sendMail({
-      from: `"${process.env.SENDGRID_FROM_NAME || 'APEX BANK'}" <${process.env.SENDGRID_FROM_EMAIL || 'noreply@apexbank.com'}>`,
+      from: `"${process.env.SENDGRID_FROM_NAME || 'NOVA CREDIT UNION'}" <${process.env.SENDGRID_FROM_EMAIL || 'noreply@novacu.com'}>`,
       to: options.to,
       subject: options.subject,
       html: options.html,
@@ -247,7 +247,7 @@ export async function sendWireTransferReceipt(data: {
     transferAmount: amountRaw,
     transferFee: feeRaw,
     supportPhone: process.env.SUPPORT_PHONE || '+1 (302) 290-6516',
-    supportEmail: process.env.SUPPORT_EMAIL || 'support@apexbank.com',
+    supportEmail: process.env.SUPPORT_EMAIL || 'support@novacu.com',
     currentYear: year,
     receiptPdfUrl: '#',
   };
@@ -335,7 +335,7 @@ export async function sendTransferReceipt(transfer: {
     transferAmount: amountRaw,
     transferFee: feeFormatted,
     supportPhone: process.env.SUPPORT_PHONE || '+1 (302) 290-6516',
-    supportEmail: process.env.SUPPORT_EMAIL || 'support@apexbank.com',
+    supportEmail: process.env.SUPPORT_EMAIL || 'support@novacu.com',
     currentYear: year,
     receiptPdfUrl: '#',
   };

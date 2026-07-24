@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { auth } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
-import { ApexLogo } from '../components/Icons';
+import { NovaLogo } from '../components/Icons';
 
 export default function TwoFactorPage() {
   const [token, setToken] = useState('');
@@ -65,7 +65,7 @@ export default function TwoFactorPage() {
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
             className="inline-block"
           >
-            <ApexLogo size={56} className="mx-auto mb-4" />
+            <NovaLogo size={56} className="mx-auto mb-4" />
           </motion.div>
           <h1 className="text-3xl font-bold glow-text" style={{ color: 'var(--text-primary)' }}>Two-Factor Auth</h1>
           <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>Enter the code from your authenticator app</p>

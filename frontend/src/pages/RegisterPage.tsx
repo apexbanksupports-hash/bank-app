@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { auth } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
-import { ApexLogo } from '../components/Icons';
+import { NovaLogo } from '../components/Icons';
 
 function FloatingInput({ label, type, value, onChange, icon }: {
   label: string; type: string; value: string; onChange: (v: string) => void;
@@ -112,12 +112,12 @@ export default function RegisterPage() {
             className="inline-block mb-4"
           >
             <div className="relative">
-              <ApexLogo size={56} />
+              <NovaLogo size={56} />
               <div className="absolute inset-0 rounded-xl" style={{ background: 'rgba(59,130,246,0.15)', filter: 'blur(16px)', transform: 'scale(1.3)' }} />
             </div>
           </motion.div>
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>APEX</h1>
-          <p className="text-xs font-semibold tracking-[4px] uppercase mt-0.5" style={{ color: 'var(--text-muted)' }}>Banking</p>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>NOVA</h1>
+          <p className="text-xs font-semibold tracking-[4px] uppercase mt-0.5" style={{ color: 'var(--text-muted)' }}>Credit Union</p>
         </motion.div>
 
         {/* Card */}

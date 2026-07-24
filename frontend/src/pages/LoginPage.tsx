@@ -4,7 +4,7 @@ import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { auth } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
-import { ApexLogo } from '../components/Icons';
+import { NovaLogo } from '../components/Icons';
 
 /* ── Floating geometry ── */
 const SHAPES = [
@@ -257,7 +257,7 @@ export default function LoginPage() {
               className="inline-block mb-5"
             >
               <div className="relative">
-                <ApexLogo size={64} />
+                <NovaLogo size={64} />
                 <div
                   className="absolute inset-0 rounded-xl"
                   style={{
@@ -269,10 +269,10 @@ export default function LoginPage() {
               </div>
             </motion.div>
             <h1 className="text-4xl font-bold tracking-tight mb-1" style={{ color: 'var(--text-primary)' }}>
-              APEX
+              NOVA
             </h1>
             <p className="text-sm font-semibold tracking-[4px] uppercase" style={{ color: 'var(--text-muted)' }}>
-              Banking
+              Credit Union
             </p>
           </motion.div>
 
@@ -429,7 +429,7 @@ export default function LoginPage() {
 
                   <div className="mt-8 text-center">
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      New to APEX?{' '}
+                      New to NOVA?{' '}
                       <Link to="/register" className="font-medium transition-colors" style={{ color: '#3b82f6' }}>
                         Create account
                       </Link>

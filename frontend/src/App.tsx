@@ -32,14 +32,14 @@ function AppContent() {
   const { theme } = useTheme();
   const [splashDone, setSplashDone] = useState(() => {
     if (typeof window !== 'undefined') {
-      const seen = sessionStorage.getItem('apex-splash-seen');
+      const seen = sessionStorage.getItem('nova-splash-seen');
       if (seen) return true;
     }
     return false;
   });
 
   const handleSplashComplete = () => {
-    sessionStorage.setItem('apex-splash-seen', '1');
+    sessionStorage.setItem('nova-splash-seen', '1');
     setSplashDone(true);
   };
 

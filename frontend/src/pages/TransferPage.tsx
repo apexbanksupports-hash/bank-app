@@ -358,7 +358,7 @@ export default function TransferPage() {
       <motion.div variants={item}>
         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Transfer</h1>
         <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-          {mode === 'internal' ? 'Send money to any APEX BANK account' : 'Send money worldwide via international wire'}
+          {mode === 'internal' ? 'Send money to any NOVA CREDIT UNION account' : 'Send money worldwide via international wire'}
         </p>
       </motion.div>
 
